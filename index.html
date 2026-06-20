@@ -9,7 +9,7 @@
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=300;400;500;700;900&display=swap');
         body {
             font-family: 'Noto Sans KR', sans-serif;
         }
@@ -91,8 +91,8 @@
         </div>
     </section>
 
-    <!-- 메인 레이아웃 -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-3 flex flex-col lg:flex-row gap-3 overflow-hidden">
+    <!-- 메인 레이아웃 (overflow-y-auto lg:overflow-hidden 패치로 모바일 스크롤 가능하게 개선) -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 flex flex-col lg:flex-row gap-3 overflow-y-auto lg:overflow-hidden">
         
         <!-- 왼쪽 사이드바 (내부 스크롤 가능 처리) -->
         <div class="w-full lg:w-72 flex flex-col gap-2.5 shrink-0 overflow-y-auto max-h-full pb-2">
@@ -130,13 +130,16 @@
                 </div>
             </div>
 
-            <!-- 정밀도 및 폐합오차 제어 카드 -->
+            <!-- 정밀도 및 폐합오차 제어 카드 (기본 축소 모드: hidden 및 회전 기본 지정) -->
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-bold mb-2 flex items-center gap-1.5 text-slate-700 border-b pb-1">
-                    <i data-lucide="scale" class="w-4 h-4 text-blue-600"></i>
-                    오차 기준 및 폐합 보정
-                </h2>
-                <div class="space-y-1.5 text-[11px]">
+                <div class="flex justify-between items-center cursor-pointer pb-1 mb-2 border-b border-slate-100" onclick="toggleCard('card-tolerance', 'icon-tolerance')">
+                    <h2 class="text-xs font-bold flex items-center gap-1.5 text-slate-700">
+                        <i data-lucide="scale" class="w-4 h-4 text-blue-600"></i>
+                        오차 기준 및 폐합 보정
+                    </h2>
+                    <i data-lucide="chevron-down" id="icon-tolerance" class="w-4 h-4 text-slate-400 transition-transform duration-200" style="transform: rotate(-90deg);"></i>
+                </div>
+                <div id="card-tolerance" class="hidden space-y-1.5 text-[11px] transition-all duration-300">
                     <div>
                         <label class="block font-semibold text-slate-500 mb-0.5">허용오차 규격 기준</label>
                         <select id="tolerance-type" onchange="recalculateAll()" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500">
@@ -167,13 +170,16 @@
                 </div>
             </div>
 
-            <!-- 오차 분석 리포트 카드 (Compact) -->
+            <!-- 오차 분석 리포트 카드 (기본 축소 모드: hidden 및 회전 기본 지정) -->
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3 rounded-xl shadow border border-slate-700 text-[11px]">
-                <h2 class="text-[10px] font-semibold tracking-wider text-slate-400 mb-1.5 uppercase flex items-center gap-1">
-                    <i data-lucide="file-check-2" class="w-3.5 h-3.5 text-blue-400"></i>
-                    오차 분석 리포트
-                </h2>
-                <div class="space-y-1">
+                <div class="flex justify-between items-center cursor-pointer pb-1 mb-1.5 border-b border-slate-700/60" onclick="toggleCard('card-report', 'icon-report')">
+                    <h2 class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1">
+                        <i data-lucide="file-check-2" class="w-3.5 h-3.5 text-blue-400"></i>
+                        오차 분석 리포트
+                    </h2>
+                    <i data-lucide="chevron-down" id="icon-report" class="w-4 h-4 text-slate-400 transition-transform duration-200" style="transform: rotate(-90deg);"></i>
+                </div>
+                <div id="card-report" class="hidden space-y-1 transition-all duration-300">
                     <div class="flex justify-between items-center border-b border-slate-700/60 pb-0.5">
                         <span class="text-slate-400">실제 오차 고저:</span>
                         <span id="actual-error" class="font-mono font-bold text-amber-400">0.0 mm</span>
@@ -233,8 +239,8 @@
             </div>
         </div>
 
-        <!-- 오른쪽 야장 메인 테이블 및 시각화 -->
-        <div class="flex-grow flex flex-col gap-3 overflow-hidden">
+        <!-- 오른쪽 야장 메인 테이블 및 시각화 (min-h 패치로 세로 화면에서도 완벽하게 보장) -->
+        <div class="flex-grow flex flex-col gap-3 min-h-[480px] lg:min-h-0 overflow-hidden">
             
             <!-- 야장 테이블 구역 -->
             <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
@@ -400,17 +406,17 @@
                 recalculateAll();
             });
 
-            // 방향키 및 엔터 내비게이션 이벤트 리스너를 한 번만 등록
+            // 방향키 및 엔터 내비게이션 이벤트 리스너를 등록
             attachNavigationEvents();
 
-            // 글로벌 포커스 리스너: 격자 셀에 진입 시 실물 타이핑 즉시 덮어쓰기 가능하도록 텍스트 전체 선택 (엑셀 효과)
+            // 글로벌 포커스 리스너
             document.addEventListener('focus', function(e) {
                 if (e.target && e.target.classList.contains('grid-input')) {
                     setTimeout(() => {
                         if (typeof e.target.select === 'function') {
                             e.target.select();
                         }
-                    }, 50); // 브라우저 고유 포커스 렌더링 후 선택 보장
+                    }, 50);
                 }
             }, true);
 
@@ -418,6 +424,19 @@
             renderTable();
             recalculateAll();
         });
+
+        // 카드 보이기/숨기기 토글 함수
+        function toggleCard(cardId, iconId) {
+            const card = document.getElementById(cardId);
+            const icon = document.getElementById(iconId);
+            if (card.classList.contains('hidden')) {
+                card.classList.remove('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                card.classList.add('hidden');
+                icon.style.transform = 'rotate(-90deg)';
+            }
+        }
 
         // 토스트 알림창
         function showToast(message, type = 'info') {
@@ -552,6 +571,17 @@
                 renderTable();
                 recalculateAll();
                 showToast("측점 순서를 아래로 변경했습니다.", "info");
+            }
+        }
+
+        // 행 삭제 기능
+        function deleteRow(id) {
+            const index = levelData.findIndex(row => row.id === id);
+            if (index !== -1) {
+                levelData.splice(index, 1);
+                renderTable();
+                recalculateAll();
+                showToast("선택 측점이 삭제되었습니다.", "warning");
             }
         }
 
@@ -744,12 +774,10 @@
         function updateSummaryAndTolerance() {
             let sumBS = 0;
             let sumFS = 0;
-            let activeBSRows = 0;
-            let activeFSRows = 0;
 
             levelData.forEach(row => {
-                if (row.bs !== null) { sumBS += row.bs; activeBSRows++; }
-                if (row.fs !== null) { sumFS += row.fs; activeFSRows++; }
+                if (row.bs !== null) { sumBS += row.bs; }
+                if (row.fs !== null) { sumFS += row.fs; }
             });
 
             const firstGH = levelData.length > 0 && levelData[0].gh !== null ? levelData[0].gh : 0;
@@ -834,7 +862,7 @@
             document.getElementById('total-station-count').textContent = levelData.length;
         }
 
-        // 전체 테이블 DOM 구조 생성 (decimal inputmode 기반의 가상 덮어쓰기 친화형 인풋 교정)
+        // 전체 테이블 DOM 구조 생성
         function renderTable() {
             const tbody = document.getElementById('level-tbody');
             const emptyState = document.getElementById('empty-state');
@@ -954,7 +982,7 @@
             recalculateAll();
         }
 
-        // 방향키 및 엔터 단축키를 이용한 엑셀 그리드급 네비게이션 바인딩
+        // 방향키 및 엔터 단축키를 이용한 엑셀 그리드급 네비게이션 바인딩 (오류 수정 패치)
         function attachNavigationEvents() {
             const table = document.getElementById('level-tbody');
             
@@ -969,7 +997,7 @@
 
                 let nextCol = col;
                 let nextRow = row;
-                const totalCols = 6; // data-col의 최대 범위 (0부터 5까지)
+                const totalCols = 6; // 0: 측점, 1: 후시, 2: 중간시, 3: 전시, 4: 계획고, 5: 비고
 
                 switch(e.key) {
                     case 'ArrowUp':
@@ -981,13 +1009,14 @@
                         e.preventDefault();
                         break;
                     case 'ArrowLeft':
-                        if (active.selectionStart === 0 || active.type === 'number') {
+                        // 셀 포커스 이동을 방향키로 부드럽게 연동하기 위해 input 내부 커서 체크 완화
+                        if (active.selectionStart === 0 || active.selectionStart === null) {
                             nextCol = Math.max(0, col - 1);
                             e.preventDefault();
                         }
                         break;
                     case 'ArrowRight':
-                        if (active.selectionEnd === active.value.length || active.type === 'number') {
+                        if (active.selectionEnd === active.value.length || active.selectionEnd === null) {
                             nextCol = Math.min(totalCols - 1, col + 1);
                             e.preventDefault();
                         }
@@ -1007,10 +1036,10 @@
                         return; 
                 }
 
+                // 지정한 다음 좌표의 인풋 박스를 찾아 포커스를 인계
                 const target = table.querySelector(`input[data-col="${nextCol}"][data-row="${nextRow}"]`);
                 if (target) {
                     target.focus();
-                    // 이동 시 바로 입력이 용이하도록 내용 전체 선택 처리 (Bypass focus delay)
                     setTimeout(() => {
                         target.select();
                     }, 0);
@@ -1032,14 +1061,16 @@
         function setKeypadTarget(id, field, label, element) {
             activeInputCell = { id, field, element };
             const rowIdx = element.getAttribute('data-row');
-            document.getElementById('keypad-target-label').textContent = `선택 셀: [행 ${parseInt(rowIdx)+1}] ${label}`;
+            if (rowIdx !== null) {
+                document.getElementById('keypad-target-label').textContent = `선택 셀: [행 ${parseInt(rowIdx)+1}] ${label}`;
+            }
             
             if (window.innerWidth < 768) {
                 toggleKeypad(true);
             }
         }
 
-        // 가상 키패드 키 입력 처리 (덮어쓰기/Overwriting 완벽 지원 설계)
+        // 가상 키패드 키 입력 처리
         function pressKey(key) {
             if (!activeInputCell) {
                 showToast("값을 입력할 셀을 선택해주십시오.", "info");
@@ -1049,7 +1080,7 @@
             const el = activeInputCell.element;
             let currentVal = el.value;
 
-            // 전체가 지정(블록)되어 있는지 판별하여 덮어쓰기 여부 결정
+            // 전체가 지정되어 있는지 판별하여 덮어쓰기 여부 결정
             let isAllSelected = false;
             try {
                 isAllSelected = (el.selectionStart === 0 && el.selectionEnd === el.value.length);
