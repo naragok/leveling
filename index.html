@@ -2,8 +2,20 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>스마트 토목 레벨 야장 프로그램 Ultimate Pro</title>
+    
+    <!-- 모바일 홈화면(PWA) 바로가기 아이콘 및 테마 설정 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="레벨 야장 PRO">
+    <meta name="theme-color" content="#030712">
+
+    <!-- 고화질 SVG 기반 파비콘 및 스마트폰 홈화면 터치 아이콘 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23172554'/%3E%3Cpath d='M368 144H144c-26.5 0-48 21.5-48 48v128c0 26.5 21.5 48 48 48h224c26.5 0 48-21.5 48-48V192c0-26.5-21.5-48-48-48z' fill='%231e3a8a'/%3E%3Ccircle cx='256' cy='256' r='64' fill='%23fbbf24'/%3E%3Cpath d='M100 256h312M256 100v312' stroke='%23ffffff' stroke-width='16' stroke-linecap='round' opacity='0.3'/%3E%3Cpath d='M320 200h48M320 256h48M320 312h48M144 200h48v32h-48zm0 64h48v48h-48z' fill='%23ffffff'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23172554'/%3E%3Cpath d='M368 144H144c-26.5 0-48 21.5-48 48v128c0 26.5 21.5 48 48 48h224c26.5 0 48-21.5 48-48V192c0-26.5-21.5-48-48-48z' fill='%231e3a8a'/%3E%3Ccircle cx='256' cy='256' r='64' fill='%23fbbf24'/%3E%3Cpath d='M100 256h312M256 100v312' stroke='%23ffffff' stroke-width='16' stroke-linecap='round' opacity='0.3'/%3E%3Cpath d='M320 200h48M320 256h48M320 312h48M144 200h48v32h-48zm0 64h48v48h-48z' fill='%23ffffff'/%3E%3C/svg%3E">
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons CDN -->
@@ -12,6 +24,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=300;400;500;700;900&display=swap');
         body {
             font-family: 'Noto Sans KR', sans-serif;
+            /* 주소창 잘림 방지를 위해 기본 100dvh로 세팅 */
+            height: 100vh;
+            height: 100dvh;
         }
         /* 입력 필드 스핀 버튼 제거 */
         input[type="number"]::-webkit-outer-spin-button,
@@ -45,7 +60,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden select-none">
+<body class="bg-slate-100 text-slate-800 flex flex-col overflow-hidden select-none">
 
     <!-- 상단 헤더 (Compact 높이 조정) -->
     <header class="bg-blue-950 text-white shadow-md px-4 py-2 shrink-0 z-40">
@@ -91,11 +106,11 @@
         </div>
     </section>
 
-    <!-- 메인 레이아웃 (overflow-y-auto lg:overflow-hidden 패치로 모바일 스크롤 가능하게 개선) -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-3 flex flex-col lg:flex-row gap-3 overflow-y-auto lg:overflow-hidden">
+    <!-- 메인 레이아웃 (세로 모드에서는 전체 스크롤, 가로 모드에서는 높이를 100% 사용하여 잘림 방지) -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 flex flex-col lg:flex-row gap-3 overflow-y-auto lg:overflow-hidden h-full">
         
-        <!-- 왼쪽 사이드바 (내부 스크롤 가능 처리) -->
-        <div class="w-full lg:w-72 flex flex-col gap-2.5 shrink-0 overflow-y-auto max-h-full pb-2">
+        <!-- 왼쪽 사이드바 (가로모드에서 가로 길이 고정, 세로모드에서 부드럽게 한 세트로 구성) -->
+        <div class="w-full lg:w-72 flex flex-col gap-2.5 shrink-0 pb-2">
             <!-- 프로젝트 정보 카드 -->
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-bold mb-2 flex items-center gap-1.5 text-slate-700 border-b pb-1">
@@ -130,7 +145,7 @@
                 </div>
             </div>
 
-            <!-- 정밀도 및 폐합오차 제어 카드 (기본 축소 모드: hidden 및 회전 기본 지정) -->
+            <!-- 정밀도 및 폐합오차 제어 카드 (기본 축소 모드: hidden) -->
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center cursor-pointer pb-1 mb-2 border-b border-slate-100" onclick="toggleCard('card-tolerance', 'icon-tolerance')">
                     <h2 class="text-xs font-bold flex items-center gap-1.5 text-slate-700">
@@ -170,7 +185,7 @@
                 </div>
             </div>
 
-            <!-- 오차 분석 리포트 카드 (기본 축소 모드: hidden 및 회전 기본 지정) -->
+            <!-- 오차 분석 리포트 카드 (기본 축소 모드: hidden) -->
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3 rounded-xl shadow border border-slate-700 text-[11px]">
                 <div class="flex justify-between items-center cursor-pointer pb-1 mb-1.5 border-b border-slate-700/60" onclick="toggleCard('card-report', 'icon-report')">
                     <h2 class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase flex items-center gap-1">
@@ -239,8 +254,8 @@
             </div>
         </div>
 
-        <!-- 오른쪽 야장 메인 테이블 및 시각화 (min-h 패치로 세로 화면에서도 완벽하게 보장) -->
-        <div class="flex-grow flex flex-col gap-3 min-h-[480px] lg:min-h-0 overflow-hidden">
+        <!-- 오른쪽 야장 메인 테이블 및 시각화 (가로 세로 모드 유연 높이 설정 최적화) -->
+        <div class="flex-grow flex flex-col gap-3 min-h-[460px] lg:min-h-0 overflow-hidden h-full">
             
             <!-- 야장 테이블 구역 -->
             <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
@@ -397,9 +412,22 @@
         let activeInputCell = null; // 모바일 키패드 매핑용 레퍼런스
         let adjustments = {}; // 배분 보정 저장 객체
 
+        // 모바일/태블릿 브라우저 주소창 높이 가변 대응 최적화 함수
+        function resetCustomViewportHeight() {
+            const dvh = window.innerHeight;
+            document.body.style.height = `${dvh}px`;
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             document.getElementById('proj-date').valueAsDate = new Date();
+            
+            // 최초 진입 및 브라우저 창 크기/회전 시 뷰포트 높이 갱신 바인딩
+            resetCustomViewportHeight();
+            window.addEventListener('resize', resetCustomViewportHeight);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(resetCustomViewportHeight, 200);
+            });
             
             // 최초 BM 지방고 변화 리스너
             document.getElementById('bm-elevation').addEventListener('input', () => {
