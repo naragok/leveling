@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 토목 레벨 야장 프로그램 Ultimate Pro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        /* 입력 필드 스핀 버튼 제거 */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        /* 포커스된 셀 강조 스타일 */
+        .grid-input:focus {
+            outline: 2px solid #2563eb;
+            background-color: #ffffff !important;
+            z-index: 10;
+        }
+        /* 스크롤바 미세 커스텀 (크롬/사파리) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- 상단 헤더 (Compact 높이 조정) -->
+    <header class="bg-blue-950 text-white shadow-md px-4 py-2 shrink-0 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-1">
+            <div class="flex items-center gap-2">
+                <div class="bg-white p-1 rounded text-blue-950">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight flex items-center gap-1.5">
+                        스마트 토목 레벨 야장 <span class="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 text-[9px] px-1.5 py-0.5 rounded-full font-black">PRO</span>
+                    </h1>
+                    <p class="text-[10px] text-blue-200 font-light">기고식 야장법 • 오차 자동 보정 배분 • 한 화면 통합 대시보드</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="bg-blue-900 px-2 py-1 rounded-full font-medium border border-blue-700 text-[10px]">
+                    오차 판정: <span id="status-text" class="text-green-400 font-bold">합격</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 실시간 요약 대시보드 바 (Compact - 4열로 최적화) -->
+    <section class="bg-slate-900 text-white border-b border-slate-800 px-4 py-1.5 shrink-0">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-[11px]">
+            <div class="border-r border-slate-800 last:border-none">
+                <p class="text-[9px] text-slate-400">최대 / 최소 지방고 (GH)</p>
+                <p class="font-mono font-bold text-indigo-300" id="dash-gh-range">- / - m</p>
+            </div>
+            <div class="border-r border-slate-800 last:border-none">
+                <p class="text-[9px] text-amber-400 font-bold">배합 폐합 오차 (Closing Error)</p>
+                <p class="font-mono font-bold text-amber-300" id="dash-closing-error">0.0 mm</p>
+            </div>
+            <div class="border-r border-slate-800 last:border-none">
+                <p class="text-[9px] text-slate-400">평균 시공 고도 편차</p>
+                <p class="font-mono font-bold text-violet-300" id="dash-avg-deviation">- m</p>
+            </div>
+            <div>
+                <p class="text-[9px] text-slate-400">주요 토공 성향</p>
+                <p class="font-bold text-emerald-400" id="dash-main-earthwork">판독 중</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 메인 레이아웃 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 flex flex-col lg:flex-row gap-3 overflow-hidden">
+        
+        <!-- 왼쪽 사이드바 (내부 스크롤 가능 처리) -->
+        <div class="w-full lg:w-72 flex flex-col gap-2.5 shrink-0 overflow-y-auto max-h-full pb-2">
+            <!-- 프로젝트 정보 카드 -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-bold mb-2 flex items-center gap-1.5 text-slate-700 border-b pb-1">
+                    <i data-lucide="folder-git2" class="w-4 h-4 text-blue-600"></i>
+                    현장 및 측정 정보
+                </h2>
+                <div class="space-y-1.5 text-[11px]">
+                    <div>
+                        <label class="block font-semibold text-slate-500 mb-0.5">공사명 / 현장명</label>
+                        <input id="proj-name" type="text" class="grid-input w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500" placeholder="예: OO공구 도로공사">
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-0.5">측정일자</label>
+                            <input id="proj-date" type="date" class="w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-0.5">측정/검측자</label>
+                            <input id="proj-user" type="text" class="grid-input w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500" placeholder="홍길동 대리">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-0.5">시작(BM) 지방고(m)</label>
+                            <input id="bm-elevation" type="text" inputmode="decimal" class="grid-input w-full bg-blue-50/50 border border-blue-300 rounded px-2 py-1 text-xs text-blue-950 font-bold focus:outline-none focus:border-blue-600" value="100.000">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-0.5">최종점 기지고(m)</label>
+                            <input id="final-known-elevation" type="text" inputmode="decimal" oninput="recalculateAll()" class="grid-input w-full bg-emerald-50/50 border border-emerald-300 rounded px-2 py-1 text-xs text-emerald-950 font-bold focus:outline-none focus:border-emerald-600" placeholder="미기입시 자동">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 정밀도 및 폐합오차 제어 카드 -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-bold mb-2 flex items-center gap-1.5 text-slate-700 border-b pb-1">
+                    <i data-lucide="scale" class="w-4 h-4 text-blue-600"></i>
+                    오차 기준 및 폐합 보정
+                </h2>
+                <div class="space-y-1.5 text-[11px]">
+                    <div>
+                        <label class="block font-semibold text-slate-500 mb-0.5">허용오차 규격 기준</label>
+                        <select id="tolerance-type" onchange="recalculateAll()" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-500">
+                            <option value="civil_normal">일반 토목공사 (±20√N mm)</option>
+                            <option value="civil_detail">정밀 구조물공사 (±10√N mm)</option>
+                            <option value="manual">사용자 지정 허용치 (mm)</option>
+                        </select>
+                    </div>
+                    <div id="manual-limit-container" class="hidden">
+                        <label class="block font-semibold text-slate-500 mb-0.5">수동 허용 한계값 (mm)</label>
+                        <input id="manual-tolerance-limit" type="text" inputmode="decimal" oninput="recalculateAll()" class="grid-input w-full bg-slate-50 border border-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none focus:border-blue-500" value="15.0">
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded border border-slate-200">
+                        <span class="text-[10px] text-slate-500 leading-tight block">
+                            💡 측량 오차 보정은 수준노선 점의 개수에 비례하여 각 측점에 균등 배분 배정됩니다.
+                        </span>
+                    </div>
+                    <div class="flex gap-1.5 pt-1">
+                        <button onclick="distributeClosingError()" class="flex-1 flex items-center justify-center gap-0.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-1 rounded text-[11px] transition-colors shadow">
+                            <i data-lucide="calculator" class="w-3 h-3"></i>
+                            오차 보정 실행
+                        </button>
+                        <button onclick="resetAdjustment()" class="flex-1 flex items-center justify-center gap-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1.5 px-1 rounded text-[11px] border border-slate-200 transition-colors">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                            보정 해제
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오차 분석 리포트 카드 (Compact) -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3 rounded-xl shadow border border-slate-700 text-[11px]">
+                <h2 class="text-[10px] font-semibold tracking-wider text-slate-400 mb-1.5 uppercase flex items-center gap-1">
+                    <i data-lucide="file-check-2" class="w-3.5 h-3.5 text-blue-400"></i>
+                    오차 분석 리포트
+                </h2>
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-0.5">
+                        <span class="text-slate-400">실제 오차 고저:</span>
+                        <span id="actual-error" class="font-mono font-bold text-amber-400">0.0 mm</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-0.5">
+                        <span class="text-slate-400">허용 오차 한계:</span>
+                        <span id="allowed-limit" class="font-mono font-bold text-sky-400">± 0.0 mm</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-0.5">
+                        <span class="text-slate-400">합격 판정 여부:</span>
+                        <span id="analysis-decision" class="font-bold px-1 py-0.5 rounded text-[9px] bg-emerald-500 text-white">합격 (PASS)</span>
+                    </div>
+                    <div class="bg-slate-950 p-1.5 rounded border border-slate-800 text-[10px] space-y-0.5 flex justify-between text-slate-400">
+                        <span>Σ BS: <span id="sum-bs" class="text-blue-400 font-mono">0.000m</span></span>
+                        <span>Σ FS: <span id="sum-fs" class="text-rose-400 font-mono">0.000m</span></span>
+                    </div>
+                    <div class="text-slate-400 text-center text-[10px] pt-1">
+                        실측 지반고차: <span id="diff-gh" class="font-mono font-bold text-emerald-400">0.000 m</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 야장 도구 제어 -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="addRow()" class="col-span-2 flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-all shadow-sm">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                        측점 행 추가
+                    </button>
+                    <button onclick="generateMockData()" class="col-span-2 flex items-center justify-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-1 px-3 rounded text-[10px] border border-indigo-100 transition-colors">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        시뮬레이션 데이터 생성
+                    </button>
+                    <button onclick="clearAllRows()" class="flex items-center justify-center gap-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-1 px-2 rounded text-[10px] border border-rose-100 transition-colors">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        야장 리셋
+                    </button>
+                    <button onclick="saveLocalData()" class="flex items-center justify-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-1 px-2 rounded text-[10px] border border-slate-300 transition-colors">
+                        <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                        로컬 백업
+                    </button>
+                    <button onclick="exportJSONBackup()" class="flex items-center justify-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-1 px-1 rounded text-[9px] border border-indigo-100 transition-colors">
+                        <i data-lucide="download" class="w-3 h-3"></i>
+                        JSON 백업
+                    </button>
+                    <button onclick="triggerJSONImport()" class="flex items-center justify-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold py-1 px-1 rounded text-[9px] border border-emerald-100 transition-colors">
+                        <i data-lucide="upload" class="w-3 h-3"></i>
+                        JSON 복원
+                    </button>
+                    <input type="file" id="json-file-input" class="hidden" accept=".json" onchange="importJSONBackup(event)">
+
+                    <button onclick="loadLocalData()" class="col-span-2 flex items-center justify-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold py-1.5 px-3 rounded text-xs border border-amber-200 transition-colors">
+                        <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+                        백업본 불러오기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 오른쪽 야장 메인 테이블 및 시각화 -->
+        <div class="flex-grow flex flex-col gap-3 overflow-hidden">
+            
+            <!-- 야장 테이블 구역 -->
+            <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <!-- 테이블 상단 제어바 -->
+                <div class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shrink-0">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                            <i data-lucide="list-collapse" class="w-4 h-4 text-blue-600"></i>
+                            시공 계획고 및 폐합 보정형 레벨 야장부
+                        </h2>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="exportToCSV()" class="flex-grow sm:flex-grow-0 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1 px-3 rounded text-xs transition-colors shadow-sm">
+                            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                            CSV 파일 내보내기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 테이블 컨테이너 -->
+                <div class="overflow-x-auto overflow-y-auto flex-1">
+                    <table class="w-full text-left border-collapse min-w-[950px] text-[11px]">
+                        <thead class="sticky top-0 bg-slate-100 z-10 border-b border-slate-200">
+                            <tr class="text-slate-600 font-bold uppercase tracking-wider text-center">
+                                <th class="py-2 px-1 w-10">순번</th>
+                                <th class="py-2 px-2 w-32">측점 (Station)</th>
+                                <th class="py-2 px-1 w-24 bg-blue-50 text-blue-900 font-black">후시 (BS)</th>
+                                <th class="py-2 px-1 w-24 bg-amber-50 text-amber-900 font-black">중간시 (IFS)</th>
+                                <th class="py-2 px-1 w-24 bg-rose-50 text-rose-900 font-black">기계고 (IH)</th>
+                                <th class="py-2 px-1 w-24 bg-emerald-50 text-emerald-900 font-black">전시 (FS)</th>
+                                <th class="py-2 px-1 w-24 bg-indigo-50 text-indigo-900 font-black">지방고 (GH)</th>
+                                <th class="py-2 px-1 w-24 bg-amber-500/10 text-amber-950 font-black">보정 GH (m)</th>
+                                <th class="py-2 px-1 w-24 bg-violet-50 text-violet-900 font-black">계획고 (DH)</th>
+                                <th class="py-2 px-1 w-28 bg-orange-50 text-orange-950 font-black">절·성토 (Cut/Fill)</th>
+                                <th class="py-2 px-2">비고 (Remarks)</th>
+                                <th class="py-2 px-1 w-20">도구</th>
+                            </tr>
+                        </thead>
+                        <tbody id="level-tbody" class="divide-y divide-slate-100">
+                            <!-- 행 동적 생성 영역 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 데이터 비었을 때 영역 -->
+                <div id="empty-state" class="hidden flex-col items-center justify-center py-10 text-center flex-1">
+                    <div class="bg-slate-100 p-2 rounded-full text-slate-400 mb-2">
+                        <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-slate-700">작성된 야장 행이 없습니다</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">아래 버튼이나 도구창을 이용해 측점을 추가해 보세요.</p>
+                    <button onclick="addRow()" class="mt-2 flex items-center gap-1.5 bg-blue-600 text-white text-[11px] px-2.5 py-1 rounded font-semibold hover:bg-blue-700">
+                        <i data-lucide="plus" class="w-3 h-3"></i>
+                        첫 행 추가
+                    </button>
+                </div>
+
+                <!-- 푸터 요약 정보 바 -->
+                <div class="p-2 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-500 gap-1 shrink-0">
+                    <div>
+                        총 측점 수: <span id="total-station-count" class="font-bold text-slate-800">0</span>개소
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center gap-0.5"><span class="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block"></span> 후시: +</span>
+                        <span class="flex items-center gap-0.5"><span class="w-1.5 h-1.5 bg-rose-500 rounded-full inline-block"></span> 전시: -</span>
+                        <span class="flex items-center gap-0.5"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full inline-block"></span> 보정 GH: 폐합 균등배분 적용</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 지반 및 시공 종단 프로파일 시각화 -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 shrink-0">
+                <div class="flex justify-between items-center mb-1.5 text-[11px]">
+                    <div>
+                        <h2 class="font-bold text-slate-800 flex items-center gap-1">
+                            <i data-lucide="line-chart" class="w-4 h-4 text-blue-600"></i>
+                            지반선 종단 프로파일 뷰어
+                        </h2>
+                    </div>
+                    <div class="flex gap-2 text-[9px] font-semibold">
+                        <span class="flex items-center gap-0.5 text-indigo-600"><span class="w-2.5 h-0.5 bg-indigo-600 inline-block"></span> 보정 지방고 (Adj. GH)</span>
+                        <span class="flex items-center gap-0.5 text-violet-400"><span class="w-3 h-0.5 border-t border-dashed border-violet-400 inline-block"></span> 계획고 (DH)</span>
+                    </div>
+                </div>
+                
+                <div class="relative w-full bg-slate-900 rounded-lg p-1.5 border border-slate-800">
+                    <svg id="profile-chart" viewBox="0 0 800 130" class="w-full h-24 lg:h-28 overflow-visible">
+                        <!-- 동적 SVG 패스 및 텍스트 렌더링 영역 -->
+                    </svg>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 모바일 전용 터치 키패드 -->
+    <div id="mobile-keypad" class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 shadow-2xl z-50 transform translate-y-full transition-transform duration-300 md:hidden">
+        <div class="max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-1.5 px-1">
+                <span class="text-[10px] text-slate-400 font-semibold" id="keypad-target-label">선택 셀: 대기 중</span>
+                <button onclick="toggleKeypad(false)" class="text-rose-400 text-[11px] font-semibold hover:text-rose-300 flex items-center gap-0.5">
+                    <i data-lucide="keyboard-off" class="w-3 h-3"></i> 키패드 닫기
+                </button>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 text-white font-mono font-bold text-base">
+                <button onclick="pressKey('7')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">7</button>
+                <button onclick="pressKey('8')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">8</button>
+                <button onclick="pressKey('9')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">9</button>
+                <button onclick="pressKey('BACK')" class="bg-rose-900 hover:bg-rose-800 py-2.5 rounded active:scale-95 transition-all flex items-center justify-center">
+                    <i data-lucide="delete" class="w-4 h-4"></i>
+                </button>
+
+                <button onclick="pressKey('4')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">4</button>
+                <button onclick="pressKey('5')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">5</button>
+                <button onclick="pressKey('6')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">6</button>
+                <button onclick="pressKey('CLEAR')" class="bg-amber-900 hover:bg-amber-800 py-2.5 text-xs rounded active:scale-95 transition-all">리셋</button>
+
+                <button onclick="pressKey('1')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">1</button>
+                <button onclick="pressKey('2')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">2</button>
+                <button onclick="pressKey('3')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">3</button>
+                <button onclick="pressKey('NEXT')" class="row-span-2 bg-blue-600 hover:bg-blue-500 rounded active:scale-95 transition-all flex flex-col items-center justify-center text-xs">
+                    <i data-lucide="corner-down-left" class="w-4 h-4 mb-1"></i>입력
+                </button>
+
+                <button onclick="pressKey('0')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all col-span-2">0</button>
+                <button onclick="pressKey('.')" class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded active:scale-95 transition-all">.</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자 피드백 모달 토스트 -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-950 text-white px-4 py-2.5 rounded-lg shadow-2xl flex items-center gap-1.5 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50 text-[11px]">
+        <i id="toast-icon" data-lucide="info" class="w-3.5 h-3.5 text-blue-400"></i>
+        <span id="toast-text" class="font-medium"></span>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="bg-slate-800 text-slate-400 text-[10px] py-1.5 text-center border-t border-slate-700 shrink-0">
+        <p>© 2026 스마트 토목 레벨 야장 프로그램. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // 초기 샘플 데이터
+        const DEFAULT_ROWS = [
+            { id: "1", station: "BM.1", bs: 1.524, ifs: null, ih: 101.524, fs: null, gh: 100.000, adjGh: 100.000, dh: 100.000, remarks: "시작 BM" },
+            { id: "2", station: "No.0", bs: null, ifs: 2.105, ih: null, fs: null, gh: 99.419, adjGh: 99.419, dh: 99.500, remarks: "" },
+            { id: "3", station: "No.1", bs: null, ifs: 1.843, ih: null, fs: null, gh: 99.681, adjGh: 99.681, dh: 99.700, remarks: "" },
+            { id: "4", station: "No.2(TP)", bs: 2.015, ifs: null, ih: 102.115, fs: 1.424, gh: 100.100, adjGh: 100.100, dh: 100.100, remarks: "이기점" },
+            { id: "5", station: "No.3", bs: null, ifs: 0.945, ih: null, fs: null, gh: 101.170, adjGh: 101.170, dh: 101.000, remarks: "" },
+            { id: "6", station: "No.4", bs: null, ifs: null, ih: null, fs: 1.125, gh: 100.990, adjGh: 100.990, dh: 101.000, remarks: "종점" }
+        ];
+
+        let levelData = [];
+        let activeInputCell = null; // 모바일 키패드 매핑용 레퍼런스
+        let adjustments = {}; // 배분 보정 저장 객체
+
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            document.getElementById('proj-date').valueAsDate = new Date();
+            
+            // 최초 BM 지방고 변화 리스너
+            document.getElementById('bm-elevation').addEventListener('input', () => {
+                recalculateAll();
+            });
+
+            // 방향키 및 엔터 내비게이션 이벤트 리스너를 한 번만 등록
+            attachNavigationEvents();
+
+            // 글로벌 포커스 리스너: 격자 셀에 진입 시 실물 타이핑 즉시 덮어쓰기 가능하도록 텍스트 전체 선택 (엑셀 효과)
+            document.addEventListener('focus', function(e) {
+                if (e.target && e.target.classList.contains('grid-input')) {
+                    setTimeout(() => {
+                        if (typeof e.target.select === 'function') {
+                            e.target.select();
+                        }
+                    }, 50); // 브라우저 고유 포커스 렌더링 후 선택 보장
+                }
+            }, true);
+
+            levelData = [...DEFAULT_ROWS];
+            renderTable();
+            recalculateAll();
+        });
+
+        // 토스트 알림창
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+            
+            toastText.textContent = message;
+            
+            if (type === 'success') {
+                toastIcon.setAttribute('data-lucide', 'check-circle');
+                toastIcon.className = 'w-3.5 h-3.5 text-emerald-400';
+            } else if (type === 'warning') {
+                toastIcon.setAttribute('data-lucide', 'alert-triangle');
+                toastIcon.className = 'w-3.5 h-3.5 text-amber-400';
+            } else {
+                toastIcon.setAttribute('data-lucide', 'info');
+                toastIcon.className = 'w-3.5 h-3.5 text-blue-400';
+            }
+            
+            lucide.createIcons();
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function clearAllRows() {
+            if (confirm("정말로 모든 야장 기록을 초기화하시겠습니까? 데이터가 전부 영구 소멸합니다.")) {
+                levelData = [];
+                adjustments = {};
+                renderTable();
+                recalculateAll();
+                showToast("모든 데이터가 초기화되었습니다.", "warning");
+            }
+        }
+
+        // 임의 시뮬레이션 데이터 생성 기능
+        function generateMockData() {
+            levelData = [
+                { id: "s1", station: "BM.A", bs: 1.254, ifs: null, ih: 101.254, fs: null, gh: 100.000, adjGh: 100.000, dh: 100.000, remarks: "기준점 BM" },
+                { id: "s2", station: "STA.0", bs: null, ifs: 1.842, ih: null, fs: null, gh: 99.412, adjGh: 99.412, dh: 99.400, remarks: "도로시작" },
+                { id: "s3", station: "STA.1", bs: null, ifs: 1.543, ih: null, fs: null, gh: 99.711, adjGh: 99.711, dh: 99.650, remarks: "중간지점" },
+                { id: "s4", station: "STA.2(TP1)", bs: 1.954, ifs: null, ih: 100.865, fs: 2.343, gh: 98.911, adjGh: 98.911, dh: 98.900, remarks: "이기점1" },
+                { id: "s5", station: "STA.3", bs: null, ifs: 1.112, ih: null, fs: null, gh: 99.753, adjGh: 99.753, dh: 99.800, remarks: "횡단" },
+                { id: "s6", station: "STA.4(TP2)", bs: 0.842, ifs: null, ih: 100.225, fs: 1.482, gh: 99.383, adjGh: 99.383, dh: 99.400, remarks: "이기점2" },
+                { id: "s7", station: "STA.5", bs: null, ifs: 1.523, ih: null, fs: null, gh: 98.702, adjGh: 98.702, dh: 98.700, remarks: "관로구간" },
+                { id: "s8", station: "STA.6(종점)", bs: null, ifs: null, ih: null, fs: 1.254, gh: 98.971, adjGh: 98.971, dh: 99.000, remarks: "시공종점" }
+            ];
+            
+            document.getElementById('bm-elevation').value = "100.000";
+            document.getElementById('final-known-elevation').value = "98.968"; 
+            adjustments = {};
+            renderTable();
+            recalculateAll();
+            showToast("수준측량 가상 시뮬레이션 데이터를 주입했습니다.", "success");
+        }
+
+        function addRow() {
+            const newId = Date.now().toString();
+            let nextStationName = "No." + levelData.length;
+            if (levelData.length === 0) {
+                nextStationName = "BM.1";
+            }
+
+            const newRow = {
+                id: newId,
+                station: nextStationName,
+                bs: null,
+                ifs: null,
+                ih: null,
+                fs: null,
+                gh: null,
+                adjGh: null,
+                dh: null,
+                remarks: ""
+            };
+
+            levelData.push(newRow);
+            renderTable();
+            
+            setTimeout(() => {
+                const element = document.getElementById(`row-${newId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('bg-blue-50/70');
+                    setTimeout(() => element.classList.remove('bg-blue-50/70'), 1500);
+                }
+            }, 100);
+        }
+
+        // 행 복사 기능
+        function duplicateRow(id) {
+            const index = levelData.findIndex(row => row.id === id);
+            if (index !== -1) {
+                const source = levelData[index];
+                const newRow = {
+                    ...JSON.parse(JSON.stringify(source)),
+                    id: Date.now().toString(),
+                    station: source.station + "_복사"
+                };
+                levelData.splice(index + 1, 0, newRow);
+                renderTable();
+                recalculateAll();
+                showToast("선택된 측점이 복사되었습니다.", "success");
+            }
+        }
+
+        // 행 순서 위로 이동
+        function moveRowUp(id) {
+            const index = levelData.findIndex(row => row.id === id);
+            if (index > 0) {
+                const temp = levelData[index];
+                levelData[index] = levelData[index - 1];
+                levelData[index - 1] = temp;
+                renderTable();
+                recalculateAll();
+                showToast("측점 순서를 위로 변경했습니다.", "info");
+            }
+        }
+
+        // 행 순서 아래로 이동
+        function moveRowDown(id) {
+            const index = levelData.findIndex(row => row.id === id);
+            if (index !== -1 && index < levelData.length - 1) {
+                const temp = levelData[index];
+                levelData[index] = levelData[index + 1];
+                levelData[index + 1] = temp;
+                renderTable();
+                recalculateAll();
+                showToast("측점 순서를 아래로 변경했습니다.", "info");
+            }
+        }
+
+        // 인풋 수정 시 데이터 변환 및 동시값 차단 정책 반영
+        function updateValue(id, field, value) {
+            const index = levelData.findIndex(row => row.id === id);
+            if (index !== -1) {
+                if (field === 'station' || field === 'remarks') {
+                    levelData[index][field] = value;
+                } else {
+                    const numValue = value === '' ? null : parseFloat(value);
+                    levelData[index][field] = (numValue === null || isNaN(numValue)) ? null : numValue;
+
+                    if (field === 'fs' && numValue !== null && levelData[index].ifs !== null) {
+                        levelData[index].ifs = null;
+                        const ifsEl = document.getElementById(`ifs-${id}`);
+                        if (ifsEl) ifsEl.value = '';
+                        showToast("동일 측점에서 전시(FS)와 중간시(IFS) 중 전시(FS)만 적용됩니다.", "info");
+                    } else if (field === 'ifs' && numValue !== null && levelData[index].fs !== null) {
+                        levelData[index].fs = null;
+                        const fsEl = document.getElementById(`fs-${id}`);
+                        if (fsEl) fsEl.value = '';
+                        showToast("동일 측점에서 중간시(IFS)와 전시(FS) 중 중간시(IFS)만 적용됩니다.", "info");
+                    }
+                }
+                recalculateAll();
+            }
+        }
+
+        /**
+         * 기고식 수준측량 핵심 연산 루틴
+         */
+        function recalculateAll() {
+            const tolType = document.getElementById('tolerance-type').value;
+            document.getElementById('manual-limit-container').classList.toggle('hidden', tolType !== 'manual');
+
+            if (levelData.length === 0) {
+                renderChart();
+                updateDashboard();
+                return;
+            }
+
+            const bmValue = parseFloat(document.getElementById('bm-elevation').value) || 100.000;
+            let currentIH = null;
+
+            for (let i = 0; i < levelData.length; i++) {
+                let row = levelData[i];
+
+                if (i === 0) {
+                    row.gh = bmValue;
+                }
+
+                // 1) 기계고(IH) 연산
+                if (row.bs !== null && row.gh !== null) {
+                    row.ih = row.gh + row.bs;
+                    currentIH = row.ih;
+                } else {
+                    row.ih = null;
+                }
+
+                // 2) 지방고(GH) 연산
+                if (i > 0 && currentIH !== null) {
+                    if (row.ifs !== null) {
+                        row.gh = currentIH - row.ifs;
+                    } else if (row.fs !== null) {
+                        row.gh = currentIH - row.fs;
+                    }
+                }
+
+                // 3) 이기점 전이 처리
+                if (row.fs !== null && row.gh !== null && row.bs !== null) {
+                    row.ih = row.gh + row.bs;
+                    currentIH = row.ih;
+                }
+
+                // 4) 보정 지방고 (Adjusted GH) 연산
+                const adjustment = adjustments[row.id] || 0;
+                row.adjGh = row.gh !== null ? (row.gh + adjustment) : null;
+            }
+
+            updateSummaryAndTolerance();
+            renderTableUpdatesOnly();
+            renderChart();
+            updateDashboard();
+        }
+
+        /**
+         * 수준노선 폐합오차 배분 연산 (측점 개수 비례 균등 보정)
+         */
+        function distributeClosingError() {
+            if (levelData.length < 2) {
+                showToast("오차 배분을 실행하려면 측점이 2개 이상 필요합니다.", "warning");
+                return;
+            }
+
+            const finalKnown = document.getElementById('final-known-elevation').value;
+            if (finalKnown === '') {
+                showToast("최종점의 기지 지방고를 상단에 기입해주십시오.", "warning");
+                return;
+            }
+
+            const knownFinalGH = parseFloat(finalKnown);
+            const lastRow = levelData[levelData.length - 1];
+            
+            if (lastRow.gh === null) {
+                showToast("마지막 측점의 지방고가 아직 계산되지 않았습니다.", "warning");
+                return;
+            }
+
+            const totalClosingError = lastRow.gh - knownFinalGH;
+            adjustments = {};
+
+            const N = levelData.length - 1;
+            levelData.forEach((row, index) => {
+                adjustments[row.id] = index === 0 ? 0 : - (totalClosingError / N) * index;
+            });
+
+            recalculateAll();
+            showToast(`폐합오차 ${(totalClosingError * 1000).toFixed(1)}mm 균등 조정을 실행했습니다.`, "success");
+        }
+
+        // 보정 초기화
+        function resetAdjustment() {
+            adjustments = {};
+            recalculateAll();
+            showToast("폐합오차 보정이 초기화되었습니다.", "info");
+        }
+
+        // 상단 대시보드 통계 계산
+        function updateDashboard() {
+            if (levelData.length === 0) return;
+
+            let minGH = Infinity, maxGH = -Infinity;
+            let sumDeviation = 0;
+            let devCount = 0;
+            let fillCount = 0, cutCount = 0;
+
+            levelData.forEach((row) => {
+                if (row.gh !== null) {
+                    minGH = Math.min(minGH, row.gh);
+                    maxGH = Math.max(maxGH, row.gh);
+                }
+                const compareGH = row.adjGh !== null ? row.adjGh : row.gh;
+                if (compareGH !== null && row.dh !== null) {
+                    const dev = compareGH - row.dh;
+                    sumDeviation += dev;
+                    devCount++;
+                    if (dev > 0) fillCount++;
+                    else if (dev < 0) cutCount++;
+                }
+            });
+
+            document.getElementById('dash-gh-range').textContent = 
+                isFinite(minGH) ? `${maxGH.toFixed(3)} / ${minGH.toFixed(3)} m` : '- / - m';
+
+            const finalKnown = document.getElementById('final-known-elevation').value;
+            const lastRow = levelData[levelData.length - 1];
+            if (finalKnown !== '' && lastRow && lastRow.gh !== null) {
+                const err = (lastRow.gh - parseFloat(finalKnown)) * 1000;
+                document.getElementById('dash-closing-error').textContent = `${err.toFixed(1)} mm`;
+            } else {
+                document.getElementById('dash-closing-error').textContent = '기지치 미정';
+            }
+
+            if (devCount > 0) {
+                const avg = sumDeviation / devCount;
+                const sign = avg > 0 ? '+' : '';
+                document.getElementById('dash-avg-deviation').textContent = `${sign}${avg.toFixed(3)} m`;
+            } else {
+                document.getElementById('dash-avg-deviation').textContent = '0.000 m';
+            }
+
+            const mainWorkEl = document.getElementById('dash-main-earthwork');
+            if (fillCount === 0 && cutCount === 0) {
+                mainWorkEl.textContent = "계획고 미입력";
+                mainWorkEl.className = "text-xs font-bold text-slate-400";
+            } else if (fillCount === cutCount) {
+                mainWorkEl.textContent = "토공 밸런스";
+                mainWorkEl.className = "text-xs font-bold text-blue-400";
+            } else if (fillCount > cutCount) {
+                mainWorkEl.textContent = "성토(쌓기) 지배";
+                mainWorkEl.className = "text-xs font-bold text-emerald-400";
+            } else {
+                mainWorkEl.textContent = "절토(깎기) 지배";
+                mainWorkEl.className = "text-xs font-bold text-amber-500";
+            }
+        }
+
+        // 오차 검산 식 및 공차 산정
+        function updateSummaryAndTolerance() {
+            let sumBS = 0;
+            let sumFS = 0;
+            let activeBSRows = 0;
+            let activeFSRows = 0;
+
+            levelData.forEach(row => {
+                if (row.bs !== null) { sumBS += row.bs; activeBSRows++; }
+                if (row.fs !== null) { sumFS += row.fs; activeFSRows++; }
+            });
+
+            const firstGH = levelData.length > 0 && levelData[0].gh !== null ? levelData[0].gh : 0;
+            const lastGH = levelData.length > 0 && levelData[levelData.length - 1].gh !== null ? levelData[levelData.length - 1].gh : 0;
+            const diffGH = lastGH - firstGH;
+
+            document.getElementById('sum-bs').textContent = `${sumBS.toFixed(3)} m`;
+            document.getElementById('sum-fs').textContent = `${sumFS.toFixed(3)} m`;
+            document.getElementById('diff-gh').textContent = `${diffGH.toFixed(3)} m`;
+
+            const actualErrorMM = Math.abs((sumBS - sumFS) - diffGH) * 1000;
+            document.getElementById('actual-error').textContent = `${actualErrorMM.toFixed(1)} mm`;
+
+            let allowedLimitMM = 0.0;
+            const tolType = document.getElementById('tolerance-type').value;
+
+            if (tolType === 'civil_normal') {
+                allowedLimitMM = 20 * Math.sqrt(levelData.length);
+            } else if (tolType === 'civil_detail') {
+                allowedLimitMM = 10 * Math.sqrt(levelData.length);
+            } else {
+                allowedLimitMM = parseFloat(document.getElementById('manual-tolerance-limit').value) || 15.0;
+            }
+
+            document.getElementById('allowed-limit').textContent = `± ${allowedLimitMM.toFixed(1)} mm`;
+
+            const isPassed = actualErrorMM <= allowedLimitMM;
+            const decEl = document.getElementById('analysis-decision');
+            const statusEl = document.getElementById('status-text');
+
+            if (isPassed) {
+                decEl.textContent = "합격 (PASS)";
+                decEl.className = "text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-white border border-emerald-600";
+                statusEl.textContent = "합격 (규격내)";
+                statusEl.className = "text-green-400 font-bold";
+            } else {
+                decEl.textContent = "불합격 (FAIL)";
+                decEl.className = "text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-600 text-white border border-rose-700";
+                statusEl.textContent = "규격 초과";
+                statusEl.className = "text-rose-400 font-bold";
+            }
+        }
+
+        // 입력 셀 값 갱신 (리포커싱 지연 방지)
+        function renderTableUpdatesOnly() {
+            levelData.forEach(row => {
+                const ihInput = document.getElementById(`ih-${row.id}`);
+                const ghInput = document.getElementById(`gh-${row.id}`);
+                const adjGhInput = document.getElementById(`adj-gh-${row.id}`);
+                const cfInput = document.getElementById(`cf-${row.id}`);
+
+                if (ihInput) ihInput.value = row.ih !== null ? row.ih.toFixed(3) : '';
+                if (ghInput) ghInput.value = row.gh !== null ? row.gh.toFixed(3) : '';
+                if (adjGhInput) {
+                    adjGhInput.value = row.adjGh !== null ? row.adjGh.toFixed(3) : '';
+                    if (row.adjGh !== null && row.gh !== null && Math.abs(row.adjGh - row.gh) > 0.0001) {
+                        adjGhInput.className = "grid-input w-full bg-amber-50 text-indigo-950 font-mono font-bold text-right border border-amber-200 rounded px-1 py-0.5 cursor-not-allowed";
+                    } else {
+                        adjGhInput.className = "grid-input w-full bg-slate-100 text-slate-500 font-mono text-right border border-slate-200 rounded px-1 py-0.5 cursor-not-allowed";
+                    }
+                }
+                
+                if (cfInput) {
+                    const workingGH = row.adjGh !== null ? row.adjGh : row.gh;
+                    if (workingGH !== null && row.dh !== null) {
+                        const dev = workingGH - row.dh;
+                        cfInput.value = dev > 0 ? `+${dev.toFixed(3)} (성)` : `${dev.toFixed(3)} (절)`;
+                        
+                        if (dev > 0) {
+                            cfInput.className = "grid-input w-full bg-slate-100 text-emerald-600 text-right font-mono font-bold border border-slate-200 rounded px-1.5 py-0.5 cursor-not-allowed";
+                        } else if (dev < 0) {
+                            cfInput.className = "grid-input w-full bg-slate-100 text-amber-600 text-right font-mono font-bold border border-slate-200 rounded px-1.5 py-0.5 cursor-not-allowed";
+                        } else {
+                            cfInput.className = "grid-input w-full bg-slate-100 text-slate-500 text-right font-mono font-bold border border-slate-200 rounded px-1.5 py-0.5 cursor-not-allowed";
+                        }
+                    } else {
+                        cfInput.value = '';
+                        cfInput.className = "grid-input w-full bg-slate-100 text-slate-300 text-right font-mono border border-slate-100 rounded px-1.5 py-0.5 cursor-not-allowed";
+                    }
+                }
+            });
+            document.getElementById('total-station-count').textContent = levelData.length;
+        }
+
+        // 전체 테이블 DOM 구조 생성 (decimal inputmode 기반의 가상 덮어쓰기 친화형 인풋 교정)
+        function renderTable() {
+            const tbody = document.getElementById('level-tbody');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (levelData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                document.getElementById('total-station-count').textContent = '0';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            let html = '';
+            
+            levelData.forEach((row, index) => {
+                const bsVal = row.bs !== null ? row.bs : '';
+                const ifsVal = row.ifs !== null ? row.ifs : '';
+                const fsVal = row.fs !== null ? row.fs : '';
+                const dhVal = row.dh !== null ? row.dh : '';
+                const ihVal = row.ih !== null ? row.ih.toFixed(3) : '';
+                const ghVal = row.gh !== null ? row.gh.toFixed(3) : '';
+                const adjGhVal = row.adjGh !== null ? row.adjGh.toFixed(3) : '';
+
+                html += `
+                    <tr id="row-${row.id}" class="hover:bg-slate-50 transition-colors border-b border-slate-100 text-center">
+                        <td class="py-1 px-1 text-center text-slate-400 font-mono font-semibold">
+                            ${index + 1}
+                        </td>
+                        <td class="py-0.5 px-1">
+                            <input type="text" data-col="0" data-row="${index}" value="${row.station}" 
+                                oninput="updateValue('${row.id}', 'station', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'station', '측점', this)"
+                                class="grid-input w-full bg-slate-50/50 border border-slate-200 focus:bg-white text-center font-bold text-slate-800 rounded px-1 py-0.5"
+                                placeholder="측점">
+                        </td>
+                        <td class="py-0.5 px-1 bg-blue-50/10">
+                            <input type="text" inputmode="decimal" data-col="1" data-row="${index}" value="${bsVal}" 
+                                oninput="updateValue('${row.id}', 'bs', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'bs', '후시', this)"
+                                class="grid-input w-full bg-transparent border border-blue-100 focus:border-blue-500 text-right text-blue-900 font-mono font-semibold rounded px-1 py-0.5"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-amber-50/10">
+                            <input type="text" inputmode="decimal" id="ifs-${row.id}" data-col="2" data-row="${index}" value="${ifsVal}" 
+                                oninput="updateValue('${row.id}', 'ifs', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'ifs', '중간시', this)"
+                                class="grid-input w-full bg-transparent border border-amber-100 focus:border-amber-500 text-right text-amber-900 font-mono font-semibold rounded px-1 py-0.5"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-rose-50/10">
+                            <input id="ih-${row.id}" type="text" value="${ihVal}" readonly
+                                class="grid-input w-full bg-slate-100 border border-rose-100/30 text-right text-rose-950 font-mono font-bold rounded px-1 py-0.5 cursor-not-allowed"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-emerald-50/10">
+                            <input type="text" inputmode="decimal" id="fs-${row.id}" data-col="3" data-row="${index}" value="${fsVal}" 
+                                oninput="updateValue('${row.id}', 'fs', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'fs', '전시', this)"
+                                class="grid-input w-full bg-transparent border border-emerald-100 focus:border-emerald-500 text-right text-emerald-900 font-mono font-semibold rounded px-1 py-0.5"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-indigo-50/10">
+                            <input id="gh-${row.id}" type="text" value="${ghVal}" readonly
+                                class="grid-input w-full bg-slate-100 border border-indigo-100/30 text-right text-indigo-950 font-mono font-bold rounded px-1 py-0.5 cursor-not-allowed"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-amber-500/5">
+                            <input id="adj-gh-${row.id}" type="text" value="${adjGhVal}" readonly
+                                class="grid-input w-full bg-slate-100 border border-slate-200 text-right text-indigo-950 font-mono rounded px-1 py-0.5 cursor-not-allowed"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-violet-50/30">
+                            <input type="text" inputmode="decimal" data-col="4" data-row="${index}" value="${dhVal}" 
+                                oninput="updateValue('${row.id}', 'dh', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'dh', '계획고', this)"
+                                class="grid-input w-full bg-violet-50/30 border border-violet-200 focus:bg-white focus:border-violet-500 text-right text-violet-950 font-mono font-bold rounded px-1 py-0.5"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1 bg-orange-50/10">
+                            <input id="cf-${row.id}" type="text" readonly
+                                class="grid-input w-full bg-slate-100 text-right font-mono rounded px-1 py-0.5 cursor-not-allowed"
+                                placeholder="-">
+                        </td>
+                        <td class="py-0.5 px-1">
+                            <input type="text" data-col="5" data-row="${index}" value="${row.remarks}" 
+                                oninput="updateValue('${row.id}', 'remarks', this.value)"
+                                onfocus="setKeypadTarget('${row.id}', 'remarks', '비고', this)"
+                                class="grid-input w-full bg-slate-50/50 border border-slate-200 focus:bg-white rounded px-1 py-0.5 text-xs"
+                                placeholder="비고">
+                        </td>
+                        <!-- 순서 조정 및 제어 툴바 -->
+                        <td class="py-0.5 px-1 text-center flex items-center justify-center">
+                            <button onclick="moveRowUp('${row.id}')" class="text-slate-400 hover:text-blue-600 p-0.5 rounded hover:bg-slate-100" title="위">
+                                <i data-lucide="chevron-up" class="w-3 h-3"></i>
+                            </button>
+                            <button onclick="moveRowDown('${row.id}')" class="text-slate-400 hover:text-blue-600 p-0.5 rounded hover:bg-slate-100" title="아래">
+                                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                            </button>
+                            <button onclick="duplicateRow('${row.id}')" class="text-slate-400 hover:text-amber-600 p-0.5 rounded hover:bg-slate-100" title="복사">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                            </button>
+                            <button onclick="deleteRow('${row.id}')" class="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50" title="삭제">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('total-station-count').textContent = levelData.length;
+            
+            lucide.createIcons();
+            recalculateAll();
+        }
+
+        // 방향키 및 엔터 단축키를 이용한 엑셀 그리드급 네비게이션 바인딩
+        function attachNavigationEvents() {
+            const table = document.getElementById('level-tbody');
+            
+            table.addEventListener('keydown', (e) => {
+                const active = document.activeElement;
+                if (!active || !active.classList.contains('grid-input')) return;
+
+                const col = parseInt(active.getAttribute('data-col'));
+                const row = parseInt(active.getAttribute('data-row'));
+
+                if (isNaN(col) || isNaN(row)) return;
+
+                let nextCol = col;
+                let nextRow = row;
+                const totalCols = 6; // data-col의 최대 범위 (0부터 5까지)
+
+                switch(e.key) {
+                    case 'ArrowUp':
+                        nextRow = Math.max(0, row - 1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        nextRow = Math.min(levelData.length - 1, row + 1);
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        if (active.selectionStart === 0 || active.type === 'number') {
+                            nextCol = Math.max(0, col - 1);
+                            e.preventDefault();
+                        }
+                        break;
+                    case 'ArrowRight':
+                        if (active.selectionEnd === active.value.length || active.type === 'number') {
+                            nextCol = Math.min(totalCols - 1, col + 1);
+                            e.preventDefault();
+                        }
+                        break;
+                    case 'Enter':
+                        if (e.shiftKey) {
+                            nextRow = Math.max(0, row - 1);
+                        } else {
+                            if (row === levelData.length - 1) {
+                                addRow(); 
+                            }
+                            nextRow = row + 1;
+                        }
+                        e.preventDefault();
+                        break;
+                    default:
+                        return; 
+                }
+
+                const target = table.querySelector(`input[data-col="${nextCol}"][data-row="${nextRow}"]`);
+                if (target) {
+                    target.focus();
+                    // 이동 시 바로 입력이 용이하도록 내용 전체 선택 처리 (Bypass focus delay)
+                    setTimeout(() => {
+                        target.select();
+                    }, 0);
+                }
+            });
+        }
+
+        // --- 모바일 전용 터치 키패드 기능 ---
+        function toggleKeypad(show) {
+            const keypad = document.getElementById('mobile-keypad');
+            if (show) {
+                keypad.classList.remove('translate-y-full');
+            } else {
+                keypad.classList.add('translate-y-full');
+            }
+        }
+
+        // 키패드 타겟 및 포커스 관리
+        function setKeypadTarget(id, field, label, element) {
+            activeInputCell = { id, field, element };
+            const rowIdx = element.getAttribute('data-row');
+            document.getElementById('keypad-target-label').textContent = `선택 셀: [행 ${parseInt(rowIdx)+1}] ${label}`;
+            
+            if (window.innerWidth < 768) {
+                toggleKeypad(true);
+            }
+        }
+
+        // 가상 키패드 키 입력 처리 (덮어쓰기/Overwriting 완벽 지원 설계)
+        function pressKey(key) {
+            if (!activeInputCell) {
+                showToast("값을 입력할 셀을 선택해주십시오.", "info");
+                return;
+            }
+
+            const el = activeInputCell.element;
+            let currentVal = el.value;
+
+            // 전체가 지정(블록)되어 있는지 판별하여 덮어쓰기 여부 결정
+            let isAllSelected = false;
+            try {
+                isAllSelected = (el.selectionStart === 0 && el.selectionEnd === el.value.length);
+            } catch (e) {
+                isAllSelected = false;
+            }
+
+            if (key === 'BACK') {
+                if (isAllSelected) {
+                    el.value = '';
+                } else {
+                    el.value = currentVal.substring(0, currentVal.length - 1);
+                }
+            } else if (key === 'CLEAR') {
+                el.value = '';
+            } else if (key === 'NEXT') {
+                const col = parseInt(el.getAttribute('data-col'));
+                const row = parseInt(el.getAttribute('data-row'));
+                const nextRow = Math.min(levelData.length - 1, row + 1);
+                
+                const table = document.getElementById('level-tbody');
+                const target = table.querySelector(`input[data-col="${col}"][data-row="${nextRow}"]`);
+                if (target) {
+                    target.focus();
+                } else {
+                    toggleKeypad(false);
+                }
+                return;
+            } else {
+                if (isAllSelected) {
+                    el.value = key; // 덮어쓰기 실행
+                } else {
+                    if (key === '.' && currentVal.includes('.')) return;
+                    el.value = currentVal + key;
+                }
+            }
+
+            updateValue(activeInputCell.id, activeInputCell.field, el.value);
+
+            // 입력 후 포커스를 유지하고 입력 커서를 글자 맨 뒤로 보내기
+            try {
+                el.focus();
+                el.setSelectionRange(el.value.length, el.value.length);
+            } catch (e) {}
+        }
+
+        // 지반 단면 프로파일 동적 렌더링 (SVG 이용)
+        function renderChart() {
+            const svg = document.getElementById('profile-chart');
+            svg.innerHTML = ''; // 초기화
+
+            if (levelData.length < 2) {
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", "400");
+                text.setAttribute("y", "65");
+                text.setAttribute("fill", "#64748b");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("class", "text-[10px] font-bold");
+                text.textContent = "프로파일을 그리려면 최소 2개 이상의 측점을 입력해 주세요.";
+                svg.appendChild(text);
+                return;
+            }
+
+            let minVal = Infinity;
+            let maxVal = -Infinity;
+
+            levelData.forEach(row => {
+                const plotGH = row.adjGh !== null ? row.adjGh : row.gh;
+                if (plotGH !== null) {
+                    minVal = Math.min(minVal, plotGH);
+                    maxVal = Math.max(maxVal, plotGH);
+                }
+                if (row.dh !== null) {
+                    minVal = Math.min(minVal, row.dh);
+                    maxVal = Math.max(maxVal, row.dh);
+                }
+            });
+
+            const offset = (maxVal - minVal) === 0 ? 1 : (maxVal - minVal) * 0.15;
+            minVal -= offset;
+            maxVal += offset;
+
+            const width = 800;
+            const height = 130;
+            const paddingLeft = 45;
+            const paddingRight = 30;
+            const paddingTop = 20;
+            const paddingBottom = 25;
+
+            const graphWidth = width - paddingLeft - paddingRight;
+            const graphHeight = height - paddingTop - paddingBottom;
+
+            const getX = (idx) => paddingLeft + (idx / (levelData.length - 1)) * graphWidth;
+            const getY = (val) => {
+                if (val === null) return null;
+                return paddingTop + graphHeight - ((val - minVal) / (maxVal - minVal)) * graphHeight;
+            };
+
+            const steps = 3;
+            for (let i = 0; i <= steps; i++) {
+                const gridY = paddingTop + (i / steps) * graphHeight;
+                const gridVal = maxVal - (i / steps) * (maxVal - minVal);
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", paddingLeft);
+                line.setAttribute("y1", gridY);
+                line.setAttribute("x2", width - paddingRight);
+                line.setAttribute("y2", gridY);
+                line.setAttribute("stroke", "#1e293b");
+                line.setAttribute("stroke-dasharray", "3,3");
+                svg.appendChild(line);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", paddingLeft - 6);
+                text.setAttribute("y", gridY + 3);
+                text.setAttribute("fill", "#94a3b8");
+                text.setAttribute("text-anchor", "end");
+                text.setAttribute("class", "text-[8px] font-mono");
+                text.textContent = gridVal.toFixed(2);
+                svg.appendChild(text);
+            }
+
+            let ghPath = "";
+            let dhPath = "";
+
+            levelData.forEach((row, idx) => {
+                const x = getX(idx);
+                const plotGH = row.adjGh !== null ? row.adjGh : row.gh;
+                const yGH = getY(plotGH);
+                const yDH = getY(row.dh);
+
+                if (yGH !== null) {
+                    ghPath += (ghPath === "" ? "M " : " L ") + `${x} ${yGH}`;
+                }
+                if (yDH !== null) {
+                    dhPath += (dhPath === "" ? "M " : " L ") + `${x} ${yDH}`;
+                }
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x);
+                text.setAttribute("y", height - 8);
+                text.setAttribute("fill", "#94a3b8");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("class", "text-[9px] font-semibold");
+                text.textContent = row.station || `No.${idx}`;
+                svg.appendChild(text);
+            });
+
+            if (dhPath !== "") {
+                const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                pathEl.setAttribute("d", dhPath);
+                pathEl.setAttribute("fill", "none");
+                pathEl.setAttribute("stroke", "#a78bfa");
+                pathEl.setAttribute("stroke-width", "1.2");
+                pathEl.setAttribute("stroke-dasharray", "4,4");
+                svg.appendChild(pathEl);
+            }
+
+            if (ghPath !== "") {
+                const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                pathEl.setAttribute("d", ghPath);
+                pathEl.setAttribute("fill", "none");
+                pathEl.setAttribute("stroke", "#4f46e5");
+                pathEl.setAttribute("stroke-width", "2");
+                svg.appendChild(pathEl);
+            }
+
+            levelData.forEach((row, idx) => {
+                const x = getX(idx);
+                const plotGH = row.adjGh !== null ? row.adjGh : row.gh;
+                const yGH = getY(plotGH);
+
+                if (yGH !== null) {
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", x);
+                    circle.setAttribute("cy", yGH);
+                    circle.setAttribute("r", "3");
+                    circle.setAttribute("fill", "#6366f1");
+                    circle.setAttribute("stroke", "#ffffff");
+                    circle.setAttribute("stroke-width", "1");
+                    svg.appendChild(circle);
+
+                    const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    valText.setAttribute("x", x);
+                    valText.setAttribute("y", yGH - 6);
+                    valText.setAttribute("fill", "#c7d2fe");
+                    valText.setAttribute("text-anchor", "middle");
+                    valText.setAttribute("class", "text-[8px] font-mono font-bold");
+                    valText.textContent = plotGH.toFixed(2);
+                    svg.appendChild(valText);
+                }
+            });
+        }
+
+        // 로컬 브라우저 데이터 보존
+        function saveLocalData() {
+            try {
+                const meta = {
+                    projectName: document.getElementById('proj-name').value,
+                    projectDate: document.getElementById('proj-date').value,
+                    projectUser: document.getElementById('proj-user').value,
+                    bmElevation: document.getElementById('bm-elevation').value,
+                    finalKnown: document.getElementById('final-known-elevation').value,
+                    levelData: levelData,
+                    toleranceType: document.getElementById('tolerance-type').value,
+                    adjustments: adjustments
+                };
+                
+                localStorage.setItem('civil_level_book_data_pro_v3', JSON.stringify(meta));
+                showToast("현재 데이터가 로컬 브라우저에 임시 저장되었습니다.", "success");
+            } catch (err) {
+                showToast("임시 저장 처리에 오류가 발생했습니다.", "warning");
+                console.error(err);
+            }
+        }
+
+        // 로컬 브라우저 세션 불러오기
+        function loadLocalData() {
+            try {
+                const raw = localStorage.getItem('civil_level_book_data_pro_v3');
+                if (!raw) {
+                    showToast("복원 가능한 이전 데이터가 존재하지 않습니다.", "warning");
+                    return;
+                }
+
+                const parsed = JSON.parse(raw);
+                document.getElementById('proj-name').value = parsed.projectName || '';
+                document.getElementById('proj-date').value = parsed.projectDate || '';
+                document.getElementById('proj-user').value = parsed.projectUser || '';
+                document.getElementById('bm-elevation').value = parsed.bmElevation || '100.000';
+                document.getElementById('final-known-elevation').value = parsed.finalKnown || '';
+                
+                if (parsed.toleranceType) document.getElementById('tolerance-type').value = parsed.toleranceType;
+                adjustments = parsed.adjustments || {};
+
+                levelData = parsed.levelData || [];
+                
+                renderTable();
+                showToast("야장 백업 정보를 복구 시켰습니다.", "success");
+            } catch (err) {
+                showToast("데이터 복원 로딩 에러가 발생했습니다.", "warning");
+                console.error(err);
+            }
+        }
+
+        // JSON 파일 백업 생성 및 내려받기
+        function exportJSONBackup() {
+            try {
+                const dataObj = {
+                    version: "Ultimate_Pro_3.0",
+                    projectName: document.getElementById('proj-name').value,
+                    projectDate: document.getElementById('proj-date').value,
+                    projectUser: document.getElementById('proj-user').value,
+                    bmElevation: document.getElementById('bm-elevation').value,
+                    finalKnown: document.getElementById('final-known-elevation').value,
+                    toleranceType: document.getElementById('tolerance-type').value,
+                    adjustments: adjustments,
+                    levelData: levelData
+                };
+
+                const dataStr = JSON.stringify(dataObj, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = `레벨야장_백업_${dataObj.projectName || '무명현장'}_${dataObj.projectDate}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                showToast("전체 앱 백업 JSON 파일을 다운로드했습니다.", "success");
+            } catch (err) {
+                showToast("JSON 백업 생성 중 문제가 발생했습니다.", "warning");
+            }
+        }
+
+        // JSON 파일 가져오기 트리거
+        function triggerJSONImport() {
+            document.getElementById('json-file-input').click();
+        }
+
+        // 파일 업로드 완료 시 백업본 파싱 및 렌더링 복원
+        function importJSONBackup(event) {
+            const input = event.target;
+            if (!input.files || input.files.length === 0) return;
+
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function() {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed.levelData) {
+                        throw new Error("Invalid LevelData Format");
+                    }
+
+                    document.getElementById('proj-name').value = parsed.projectName || '';
+                    document.getElementById('proj-date').value = parsed.projectDate || '';
+                    document.getElementById('proj-user').value = parsed.projectUser || '';
+                    document.getElementById('bm-elevation').value = parsed.bmElevation || '100.000';
+                    document.getElementById('final-known-elevation').value = parsed.finalKnown || '';
+                    
+                    if (parsed.toleranceType) document.getElementById('tolerance-type').value = parsed.toleranceType;
+                    adjustments = parsed.adjustments || {};
+
+                    levelData = parsed.levelData;
+                    renderTable();
+                    recalculateAll();
+
+                    showToast("JSON 백업본으로부터 데이터를 복원했습니다.", "success");
+                } catch (e) {
+                    showToast("유효하지 않은 백업용 JSON 파일입니다.", "warning");
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // 초기화
+        }
+
+        // CSV 파일 저장 및 내보내기
+        function exportToCSV() {
+            if (levelData.length === 0) {
+                showToast("추출해 낼 기입 측점이 없습니다.", "warning");
+                return;
+            }
+
+            const pName = document.getElementById('proj-name').value || '미정_토목현장';
+            const pDate = document.getElementById('proj-date').value || '미정_일자';
+            const pUser = document.getElementById('proj-user').value || '미등록';
+
+            let csv = "\uFEFF"; 
+            
+            csv += `공사명 / 현장명,${pName}\r\n`;
+            csv += `측정일자,${pDate}\r\n`;
+            csv += `현장 검측원,${pUser}\r\n\r\n`;
+
+            csv += "순번,측점 (Station),후시 (BS),중간시 (IFS),기계고 (IH),전시/이기점 (FS),지방고 (GH),보정 지방고 (Adj.GH),계획고 (DH),절·성토 (Cut/Fill),비고 (Remarks)\r\n";
+
+            levelData.forEach((row, idx) => {
+                const bsVal = row.bs !== null ? row.bs.toFixed(3) : '';
+                const ifsVal = row.ifs !== null ? row.ifs.toFixed(3) : '';
+                const ihVal = row.ih !== null ? row.ih.toFixed(3) : '';
+                const fsVal = row.fs !== null ? row.fs.toFixed(3) : '';
+                const ghVal = row.gh !== null ? row.gh.toFixed(3) : '';
+                const adjGhVal = row.adjGh !== null ? row.adjGh.toFixed(3) : '';
+                const dhVal = row.dh !== null ? row.dh.toFixed(3) : '';
+                
+                let cfVal = '';
+                const compGH = row.adjGh !== null ? row.adjGh : row.gh;
+                if (compGH !== null && row.dh !== null) {
+                    const d = compGH - row.dh;
+                    cfVal = d > 0 ? `+${d.toFixed(3)}(성)` : `${d.toFixed(3)}(절)`;
+                }
+
+                const cStation = row.station.replace(/"/g, '""');
+                const cRemarks = row.remarks.replace(/"/g, '""');
+
+                csv += `${idx + 1},"${cStation}",${bsVal},${ifsVal},${ihVal},${fsVal},${ghVal},${adjGhVal},${dhVal},"${cfVal}","${cRemarks}"\r\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            const fileName = `레벨야장_ULTIMATE_${pName.replace(/[^a-zA-Z0-9가-힣]/g, '_')}_${pDate}.csv`;
+
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast("수준측량 CSV 파일 내보내기가 완료되었습니다.", "success");
+        }
+    </script>
+</body>
+</html>
